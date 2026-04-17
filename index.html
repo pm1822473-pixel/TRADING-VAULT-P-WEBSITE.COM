@@ -5,10 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TradeVault Pro — Professional Trading Suite</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore.js"></script>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{--bg:#04080a;--bull:#00e676;--bear:#ff1744;--surface:rgba(8,16,20,0.92);--border:rgba(0,230,118,0.14);--text:#e0f7e9;--muted:#546e6a;--gold:#ffc400;--blue:#40c4ff;--card:rgba(6,12,16,0.9);}
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -112,7 +108,7 @@ input:focus,select:focus,textarea:focus{border-color:rgba(0,230,118,0.4);box-sha
 .btn-g:disabled{opacity:0.6;cursor:not-allowed;}
 .btn-ghost{background:transparent;border:1px solid rgba(0,230,118,0.16);color:var(--muted);}
 .btn-ghost:hover{color:var(--text);border-color:rgba(0,230,118,0.3);}
-.btn-red{background:transparent;border:1px solid rgba(255,82,82,0.25);color:#ff5252;}
+.btn-red{background:transparent;border:1px solid rgba(255,82,82,0.25);color:#ff5252;cursor:pointer;}
 .btn-del{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 6px;}
 .btn-del:hover{color:#ff5252;}
 .twrap{overflow-x:auto;}
@@ -356,11 +352,15 @@ tr:hover td{background:rgba(0,230,118,0.02);}
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+
 <script>
 'use strict';
 
 // ═════════════════════════════════════════════════════════════
-// 🔥 FIREBASE CONFIG - READY TO USE ⬇️
+// 🔥 FIREBASE CONFIG - INITIALIZED FIRST ⬇️
 // ═════════════════════════════════════════════════════════════
 const firebaseConfig = {
   apiKey: "AIzaSyB3SFVsZ54KXf58G3c_9zXEj0sCxnbcX0s",
@@ -373,9 +373,11 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = firebase.initializeApp(firebaseConfig);
+firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
+
+console.log('✅ Firebase initialized successfully!');
 
 let currentUser = null;
 let trades = [];
@@ -442,7 +444,7 @@ function toast(msg, isError = false){
   setTimeout(() => el.className = '', 3000);
 }
 
-// ═════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════��══════════════════
 // CLOCK
 // ═════════════════════════════════════════════════════════════
 function tick(){
@@ -482,10 +484,10 @@ async function doLogin(){
   try{
     const result = await auth.signInWithEmailAndPassword(email, pass);
     currentUser = result.user;
-    await enterApp();
-    toast('✅ Welcome!');
+    console.log('✅ Login successful:', currentUser.email);
   }catch(err){
     errEl.textContent = err.message || 'Login failed';
+    console.error('Login error:', err);
   }finally{
     btn.disabled = false;
     btn.textContent = 'Sign In →';
@@ -521,47 +523,17 @@ async function doSignup(){
       pnl: 0
     });
     
-    toast('✅ Account created!');
+    console.log('✅ Signup successful:', currentUser.email);
     authTab('login', document.querySelectorAll('.auth-tab')[0]);
     document.getElementById('li-email').value = email;
   }catch(err){
     errEl.textContent = err.message || 'Signup failed';
+    console.error('Signup error:', err);
   }finally{
     btn.disabled = false;
     btn.textContent = 'Create Account →';
   }
 }
-
-async function googleAuth(){
-  try{
-    const provider = new firebase.auth.GoogleAuthProvider();
-    const result = await auth.signInWithPopup(provider);
-    currentUser = result.user;
-    
-    const userDoc = await db.collection('users').doc(currentUser.uid).get();
-    if(!userDoc.exists){
-      await db.collection('users').doc(currentUser.uid).set({
-        name: currentUser.displayName || 'Trader',
-        email: currentUser.email,
-        createdAt: new Date(),
-        trades: 0,
-        pnl: 0
-      });
-    }
-    
-    await enterApp();
-    toast('✅ Welcome!');
-  }catch(err){
-    toast('Google auth: ' + err.message, true);
-  }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('googleLoginBtn')?.addEventListener('click', googleAuth);
-  document.getElementById('googleSignupBtn')?.addEventListener('click', googleAuth);
-  if(document.getElementById('f-date')) 
-    document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
-});
 
 async function signOut(){
   try{
@@ -921,9 +893,10 @@ async function loadAll(){
 }
 
 // ═════════════════════════════════════════════════════════════
-// CHECK AUTH
+// AUTH STATE LISTENER - FIRES WHEN USER LOGS IN/OUT
 // ═════════════════════════════════════════════════════════════
 auth.onAuthStateChanged(user => {
+  console.log('Auth state changed:', user ? user.email : 'No user');
   if(user){
     currentUser = user;
     enterApp();
@@ -933,9 +906,24 @@ auth.onAuthStateChanged(user => {
   }
 });
 
+// ═════════════════════════════════════════════════════════════
+// EVENT LISTENERS
+// ═════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('googleLoginBtn')?.addEventListener('click', () => {
+    toast('Google sign-in not configured yet. Use email/password for now.');
+  });
+  document.getElementById('googleSignupBtn')?.addEventListener('click', () => {
+    toast('Google sign-up not configured yet. Use email/password for now.');
+  });
+  if(document.getElementById('f-date')) 
+    document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+});
+
 document.addEventListener('keydown', e => {
   if(e.key === 'Escape') closeUserModal();
 });
 </script>
+
 </body>
 </html>
