@@ -2099,6 +2099,26 @@ async function loadAll(){
   renderTable();updateStats();
 }
 </script>
+
+<script>
+fetch('http://localhost:3000/user')
+  .then(res => {
+    if (!res.ok) throw new Error();
+    return res.json();
+  })
+  .then(user => {
+    console.log("User:", user);
+
+    // show username on your page
+    const el = document.createElement("h3");
+    el.innerText = "Welcome " + user.username;
+    document.body.prepend(el);
+  })
+  .catch(() => {
+    console.log("Not logged in");
+  });
+</script>
+
 </body>
 </html>
 
